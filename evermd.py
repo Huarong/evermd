@@ -1,6 +1,9 @@
 # encoding: utf-8
 # author: Huarong Huo
 
+import sys
+sys.path.insert(0, 'lib/')
+print sys.path
 import os
 import os.path
 import tempfile

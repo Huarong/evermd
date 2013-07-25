@@ -3,9 +3,10 @@
 
 import sys
 from unittest import TestCase, main
-import markdown
 
+sys.path.append('../lib')
 sys.path.append('../')
+import markdown
 from evermd import MarkdownComplier
 
 
