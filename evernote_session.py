@@ -6,16 +6,19 @@ sys.path.insert(0, 'lib/')
 print sys.path
 import os
 import os.path
+import logging
 import tempfile
 import markdown
 from evernote.api.client import EvernoteClient
 import evernote.edam.type.ttypes as Types
 import evernote.edam.error.ttypes as Errors
 
+
 class EvernoteSession(object):
     def __init__(self):
         self.token = 'S=s1:U=71d19:E=147661e4de8:C=1400e6d21ea:P=1cd:A=en-devtoken:V=2:H=57b60a9b8c031aa3a1333ff591c1aa25'
         self.client = None
+        self.logger = logging.getLogger(self.__class__.__name__)
 
     def connect(self, token=''):
         if token:
@@ -31,20 +34,19 @@ class EvernoteSession(object):
                 return nb
         return None
 
-    def dir_exist(self):
+    def create_notebook(self, name):
+        """Create a notebook if not exist"""
+        if self.get_notebook_by_name(name):
+            return False
         note_store = self.client.get_note_store()
-
-
-    def create_dir(self):
-        """Create a notebook named __evermd__ to store markdown source code if not exist"""
-        noteStore = self.client.get_note_store()
         notebook = Types.Notebook()
-        notebook.name = '__evermd__'
+        notebook.name = name
         try:
-            notebook = noteStore.createNotebook(notebook)
-            return notebook.guid
-        except Errors.Errors.EDAMUserException,e:
-            sublime.error_message('Error %s' % e)
+            notebook = note_store.createNotebook(notebook)
+            return notebook
+        except Errors.EDAMUserException, e:
+            self.logger.error(e)
+            return False
 
     def upload(self, content):
         noteStore = self.client.get_note_store()

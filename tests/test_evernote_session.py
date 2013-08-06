@@ -27,6 +27,15 @@ class EvernoteSessionTest(TestCase):
         guid = notebook.guid
         self.assertEqual(guid, '58481245-136a-4cf8-ad70-4fe40909909a')
 
+    def test_create_notebook(self):
+        name = '__test_create_notebook__'
+        created_nb = self.session.create_notebook(name)
+        got_nb = self.session.get_notebook_by_name(name)
+        self.assertEqual(created_nb.guid, got_nb.guid)
+        self.note_store.expungeNotebook(created_nb.guid)
+
+
+
 
 
 if __name__ == '__main__':
