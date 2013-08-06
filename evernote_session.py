@@ -23,6 +23,18 @@ class EvernoteSession(object):
         client = EvernoteClient(token=self.token)
         self.client = client
 
+    def get_notebook_by_name(self, name):
+        note_store = self.client.get_note_store()
+        notebooks = note_store.listNotebooks()
+        for nb in notebooks:
+            if nb.name == name:
+                return nb
+        return None
+
+    def dir_exist(self):
+        note_store = self.client.get_note_store()
+
+
     def create_dir(self):
         """Create a notebook named __evermd__ to store markdown source code if not exist"""
         noteStore = self.client.get_note_store()
