@@ -6,13 +6,14 @@ sys.path.insert(0, 'lib/')
 print sys.path
 import os
 import os.path
+import re
 import logging
 import tempfile
 import markdown
 from evernote.api.client import EvernoteClient
 import evernote.edam.type.ttypes as Types
 import evernote.edam.error.ttypes as Errors
-
+from utils import text_to_ENML
 
 class EvernoteSession(object):
     def __init__(self):
@@ -48,10 +49,52 @@ class EvernoteSession(object):
             self.logger.error(e)
             return False
 
-    def upload(self, content):
-        noteStore = self.client.get_note_store()
+    def get_meta_info(self, content):
+        meta_info = {}
+        pattern = re.compile('<!--(.*?)-->', re.DOTALL)
+        result = pattern.search(content)
+        if not result:
+            return meta_info
+        meta_str = result.group(1)
+        # {'name in content': 'name in evernote note attribute'}
+        valid_field = {'title': 'title', 'tags': 'tagNames', 'notebook': 'notebookGuid'}
+        lines = meta_str.split(os.linesep)
+        pattern = re.compile('^(.+?):(.+?)$')
+        for line in lines:
+            if not line:
+                continue
+            result = pattern.match(line)
+            if not result:
+                continue
+            field = result.group(1).strip()
+            value = result.group(2).strip()
+            if field in valid_field:
+                if field == 'tags':
+                    value = [v.strip() for v in value.split(',')]
+                if field == 'notebook':
+                    value = self.get_notebook_by_name(value).guid
+                meta_info[valid_field[field]] = value
+        return meta_info
+
+    def get_note(self, guid):
+        note_store = self.client.get_note_store()
+        return note_store.getNote(guid, True, False, False, False)
+
+    def post_note(self, meta_info, content):
+        note_store = self.client.get_note_store()
         note = Types.Note()
-        note.title = 'hello'
-        note.content = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE en-note SYSTEM "http://xml.evernote.com/pub/enml2.dtd">'
-        note.content += '<en-note>%s</en-note>' % content
+        for k, v in meta_info.items():
+            setattr(note, k, v)
+        note.content = text_to_ENML(content)
         note = note_store.createNote(note)
+        return note
+
+    def update_note(self, guid, meta_info, content):
+        note = self.get_note(guid)
+        for k, v in meta_info.items():
+            setattr(note, k, v)
+        note.content = text_to_ENML(content)
+        note_store = self.client.get_note_store()
+        note_store.updateNote(note)
+        return note
+
