@@ -26,6 +26,8 @@ class EvernoteSession(object):
             self.token = token
         client = EvernoteClient(token=self.token)
         self.client = client
+        self.note_store = client.get_note_store()
+        self.user_store = client.get_user_store()
 
     def get_notebook_by_name(self, name):
         note_store = self.client.get_note_store()
@@ -49,6 +51,7 @@ class EvernoteSession(object):
             self.logger.error(e)
             return False
 
+
     def get_meta_info(self, content):
         meta_info = {}
         pattern = re.compile('<!--(.*?)-->', re.DOTALL)
@@ -57,7 +60,9 @@ class EvernoteSession(object):
             return meta_info
         meta_str = result.group(1)
         # {'name in content': 'name in evernote note attribute'}
-        valid_field = {'title': 'title', 'tags': 'tagNames', 'notebook': 'notebookGuid'}
+        valid_field = {'title': 'title', 'tags': 'tagGuids', 'notebook': 'notebookGuid'}
+        # In files, line break depend on OS: Linux: \n; Windows: \n\r
+        # In multi-line string with three quotes in Python, the line break always \n
         lines = meta_str.split(os.linesep)
         pattern = re.compile('^(.+?):(.+?)$')
         for line in lines:
@@ -98,3 +103,21 @@ class EvernoteSession(object):
         note_store.updateNote(note)
         return note
 
+
+
+def get_tag_by_name(note_store, names):
+
+    def get_a_tag_by_name(note_store, name):
+        for tag in note_store.listTags():
+            if tag.name == name:
+                return tag.guid
+        return None
+
+    if type(names) == 'str' or 'unicode':
+        return get_a_tag_by_name(note_store, names)
+    # a list of tags
+    else:
+        guids = []
+        for name in names:
+            guids.append(get_a_tag_by_name(note_store, name))
+        return guids
